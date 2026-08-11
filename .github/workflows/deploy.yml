@@ -57,15 +57,21 @@ jobs:
       - name: Generate Dynamic config.js
         run: node build-config.js
 
-      # 3. Assemble and Stage Bundle
+     # 3. Assemble and Stage Bundle
       - name: Locate Files and Stage Deployment
         run: |
           mkdir -p dist
 
-          # Find index.html parent folder and copy to dist
-          INDEX_PATH=$(find . -name "index.html" -not -path "*/dist/*" | head -n 1)
+          # Find index.html ignoring dependency and library folders
+          INDEX_PATH=$(find . -name "index.html" \
+            -not -path "*/dist/*" \
+            -not -path "*/bower_components/*" \
+            -not -path "*/lib/*" \
+            -not -path "*/node_modules/*" \
+            | head -n 1)
+
           APP_DIR=$(dirname "$INDEX_PATH")
-          echo "📁 Found index.html in: $APP_DIR"
+          echo "📁 Found true app index.html in: $APP_DIR"
           cp -r $APP_DIR/* dist/
 
           # Copy lib/ or bower_components/ to dist/lib
@@ -84,17 +90,16 @@ jobs:
           fi
 
           # Copy content/ to dist/content
-          CONTENT_DIR=$(find . -type d -name "content" -not -path "*/dist/*" | head -n 1)
+          CONTENT_DIR=$(find . -type d -name "content" -not -path "*/dist/*" -not -path "*/node_modules/*" | head -n 1)
           if [ -n "$CONTENT_DIR" ]; then
             echo "📁 Found content/ in: $CONTENT_DIR"
             cp -r $CONTENT_DIR dist/
           fi
 
-          # Include generated config.js
+          # Ensure generated config.js is in dist/ and dist/content/
           mkdir -p dist/content
           cp config.js dist/
           cp config.js dist/content/
-
       # 4. Deploy staged dist/ directory to GitHub Pages
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
