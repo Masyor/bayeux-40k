@@ -24,58 +24,73 @@ jobs:
         with:
           node-version: 18
 
-      # 1. Smart Dependency Check & Installation
+      # 1. Patch dead dependencies & run Bower
       - name: Install Dependencies If Found
         run: |
           npm install -g bower || true
           
           BOWER_FILE=$(find . -name "bower.json" -not -path "*/node_modules/*" | head -n 1)
-          PKG_FILE=$(find . -name "package.json" -not -path "*/node_modules/*" | head -n 1)
 
           if [ -n "$BOWER_FILE" ]; then
             echo "✅ Found bower.json at $BOWER_FILE"
+            
+            # Remove deleted yahoo/gifshot repo from bower.json so install succeeds
+            node -e "
+              const fs = require('fs');
+              const file = '$BOWER_FILE';
+              const json = JSON.parse(fs.readFileSync(file));
+              if (json.dependencies && json.dependencies.gifshot) {
+                delete json.dependencies.gifshot;
+                fs.writeFileSync(file, JSON.stringify(json, null, 2));
+                console.log('✂️ Removed dead yahoo/gifshot dependency');
+              }
+            "
+
             cd $(dirname "$BOWER_FILE")
-            bower install --allow-root
-            cd -
-          elif [ -n "$PKG_FILE" ]; then
-            echo "✅ Found package.json at $PKG_FILE"
-            cd $(dirname "$PKG_FILE")
-            npm install
+            bower install --allow-root || true
             cd -
           else
-            echo "ℹ️ No bower.json or package.json found. Skipping package manager step."
+            echo "ℹ️ No bower.json found. Skipping package manager step."
           fi
 
       # 2. Generate dynamic config.js from content/images/
       - name: Generate Dynamic config.js
         run: node build-config.js
 
-      # 3. Smart Bundle Staging
+      # 3. Assemble and Stage Bundle
       - name: Locate Files and Stage Deployment
         run: |
           mkdir -p dist
 
-          # Find where index.html lives and copy its parent folder contents to dist
+          # Find index.html parent folder and copy to dist
           INDEX_PATH=$(find . -name "index.html" -not -path "*/dist/*" | head -n 1)
           APP_DIR=$(dirname "$INDEX_PATH")
           echo "📁 Found index.html in: $APP_DIR"
           cp -r $APP_DIR/* dist/
 
-          # Find where lib/ lives (if anywhere) and copy it to dist/lib
+          # Copy lib/ or bower_components/ to dist/lib
           LIB_DIR=$(find . -type d -name "lib" -not -path "*/dist/*" -not -path "*/node_modules/*" | head -n 1)
+          BOWER_DIR=$(find . -type d -name "bower_components" -not -path "*/dist/*" -not -path "*/node_modules/*" | head -n 1)
+
           if [ -n "$LIB_DIR" ]; then
             echo "📁 Found lib/ in: $LIB_DIR"
             cp -r $LIB_DIR dist/
           fi
 
-          # Find where content/ lives and copy it to dist/content
+          if [ -n "$BOWER_DIR" ]; then
+            echo "📁 Found bower_components/ in: $BOWER_DIR"
+            mkdir -p dist/lib
+            cp -r $BOWER_DIR/* dist/lib/
+          fi
+
+          # Copy content/ to dist/content
           CONTENT_DIR=$(find . -type d -name "content" -not -path "*/dist/*" | head -n 1)
           if [ -n "$CONTENT_DIR" ]; then
             echo "📁 Found content/ in: $CONTENT_DIR"
             cp -r $CONTENT_DIR dist/
           fi
 
-          # Ensure generated config.js is in dist/
+          # Include generated config.js
           cp config.js dist/
 
       # 4. Deploy staged dist/ directory to GitHub Pages
