@@ -32,7 +32,13 @@
     <!-- build:js(.) scripts/vendor.js -->
     <!-- bower:js -->
     <script src="lib/jquery/dist/jquery.js"></script>
-    <script>if (window.jQuery && !jQuery.isArray) { jQuery.isArray = Array.isArray; }</script>
+    <script>
+      if (window.jQuery) {
+        if (!jQuery.isArray) jQuery.isArray = Array.isArray;
+        if (!jQuery.isFunction) jQuery.isFunction = function(obj) { return typeof obj === 'function'; };
+        if (!jQuery.type) jQuery.type = function(obj) { return Object.prototype.toString.call(obj).replace(/^\[object\s+|\]$/g, '').toLowerCase(); };
+      }
+    </script>
     <script src="lib/angular/angular.js"></script>
     <script src="lib/angular-animate/angular-animate.js"></script>
     <script src="lib/angular-aria/angular-aria.js"></script>
