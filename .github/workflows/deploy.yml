@@ -37,4 +37,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           # Point publish_dir to the actual app folder containing index.html!
           # If your folder path is 'htck/app', change 'app' below to 'htck/app'
-          publish_dir: ./app
+          publish_dir: ./htck/app
