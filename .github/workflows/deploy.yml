@@ -3,6 +3,7 @@ name: Build and Deploy to GitHub Pages
 on:
   push:
     branches:
+      - main
       - master
   workflow_dispatch:
 
@@ -23,18 +24,35 @@ jobs:
         with:
           node-version: 18
 
+      # 1. Install Bower globally so we can fetch vendor dependencies
+      - name: Install Bower
+        run: npm install -g bower
+
+      # 2. Download missing JS libraries into lib/ using bower.json
+      - name: Install Frontend Dependencies
+        run: bower install --allow-root
+
+      # 3. Generate your dynamic config.js from content/images/
       - name: Generate Dynamic config.js
         run: node build-config.js
 
-      # Copy config.js directly into the app folder where index.html looks for it
-      - name: Prepare Deployment Directory
+      # 4. Stage everything into a single publish folder
+      - name: Stage Full Deployment Package
         run: |
-          cp config.js app/ || cp config.js htck/app/ || true
+          mkdir -p dist
+
+          # Copy app files to root of dist
+          cp -r app/* dist/
+
+          # Copy freshly fetched lib dependencies and content assets
+          cp -r lib dist/ || true
+          cp -r content dist/ || true
+
+          # Include generated config.js
+          cp config.js dist/
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          # Point publish_dir to the actual app folder containing index.html!
-          # If your folder path is 'htck/app', change 'app' below to 'htck/app'
-          publish_dir: ./htck/app
+          publish_dir: ./dist
