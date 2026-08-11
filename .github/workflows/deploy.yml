@@ -91,7 +91,9 @@ jobs:
           fi
 
           # Include generated config.js
+          mkdir -p dist/content
           cp config.js dist/
+          cp config.js dist/content/
 
       # 4. Deploy staged dist/ directory to GitHub Pages
       - name: Deploy to GitHub Pages
