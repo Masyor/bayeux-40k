@@ -32,6 +32,8 @@
     <!-- build:js(.) scripts/vendor.js -->
     <!-- bower:js -->
     <script src="lib/jquery/dist/jquery.js"></script>
+    
+    <!-- LEGACY JQUERY POLYFILL (Fixes jQuery UI & Angular Dragdrop crash) -->
     <script>
       if (window.jQuery) {
         if (!jQuery.isArray) jQuery.isArray = Array.isArray;
@@ -39,6 +41,7 @@
         if (!jQuery.type) jQuery.type = function(obj) { return Object.prototype.toString.call(obj).replace(/^\[object\s+|\]$/g, '').toLowerCase(); };
       }
     </script>
+
     <script src="lib/angular/angular.js"></script>
     <script src="lib/angular-animate/angular-animate.js"></script>
     <script src="lib/angular-aria/angular-aria.js"></script>
@@ -49,7 +52,8 @@
     <script src="lib/angular-dragdrop/src/angular-dragdrop.js"></script>
     <script src="lib/angular-hotkeys/build/hotkeys.js"></script>
     <script src="lib/canvg/dist/canvg.bundle.min.js"></script>
-    <script src="lib/FileSaver/FileSaver.js"></script>
+    <!-- Updated path for FileSaver -->
+    <script src="lib/file-saver/dist/FileSaver.min.js"></script>
     <script src="lib/raphael/raphael.js"></script>
     <!-- endbower -->
     <script src="lib/raphael_free_transform/raphael.free_transform.js"></script>
