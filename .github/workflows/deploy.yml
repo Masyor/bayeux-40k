@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -25,8 +26,15 @@ jobs:
       - name: Generate Dynamic config.js
         run: node build-config.js
 
+      # Copy config.js directly into the app folder where index.html looks for it
+      - name: Prepare Deployment Directory
+        run: |
+          cp config.js app/ || cp config.js htck/app/ || true
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .
+          # Point publish_dir to the actual app folder containing index.html!
+          # If your folder path is 'htck/app', change 'app' below to 'htck/app'
+          publish_dir: ./app
