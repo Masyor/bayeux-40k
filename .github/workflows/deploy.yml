@@ -24,33 +24,61 @@ jobs:
         with:
           node-version: 18
 
-      # 1. Install Bower globally so we can fetch vendor dependencies
-      - name: Install Bower
-        run: npm install -g bower
+      # 1. Smart Dependency Check & Installation
+      - name: Install Dependencies If Found
+        run: |
+          npm install -g bower || true
+          
+          BOWER_FILE=$(find . -name "bower.json" -not -path "*/node_modules/*" | head -n 1)
+          PKG_FILE=$(find . -name "package.json" -not -path "*/node_modules/*" | head -n 1)
 
-      # 2. Download missing JS libraries into lib/ using bower.json
-      - name: Install Frontend Dependencies
-        run: bower install --allow-root
+          if [ -n "$BOWER_FILE" ]; then
+            echo "✅ Found bower.json at $BOWER_FILE"
+            cd $(dirname "$BOWER_FILE")
+            bower install --allow-root
+            cd -
+          elif [ -n "$PKG_FILE" ]; then
+            echo "✅ Found package.json at $PKG_FILE"
+            cd $(dirname "$PKG_FILE")
+            npm install
+            cd -
+          else
+            echo "ℹ️ No bower.json or package.json found. Skipping package manager step."
+          fi
 
-      # 3. Generate your dynamic config.js from content/images/
+      # 2. Generate dynamic config.js from content/images/
       - name: Generate Dynamic config.js
         run: node build-config.js
 
-      # 4. Stage everything into a single publish folder
-      - name: Stage Full Deployment Package
+      # 3. Smart Bundle Staging
+      - name: Locate Files and Stage Deployment
         run: |
           mkdir -p dist
 
-          # Copy app files to root of dist
-          cp -r app/* dist/
+          # Find where index.html lives and copy its parent folder contents to dist
+          INDEX_PATH=$(find . -name "index.html" -not -path "*/dist/*" | head -n 1)
+          APP_DIR=$(dirname "$INDEX_PATH")
+          echo "📁 Found index.html in: $APP_DIR"
+          cp -r $APP_DIR/* dist/
 
-          # Copy freshly fetched lib dependencies and content assets
-          cp -r lib dist/ || true
-          cp -r content dist/ || true
+          # Find where lib/ lives (if anywhere) and copy it to dist/lib
+          LIB_DIR=$(find . -type d -name "lib" -not -path "*/dist/*" -not -path "*/node_modules/*" | head -n 1)
+          if [ -n "$LIB_DIR" ]; then
+            echo "📁 Found lib/ in: $LIB_DIR"
+            cp -r $LIB_DIR dist/
+          fi
 
-          # Include generated config.js
+          # Find where content/ lives and copy it to dist/content
+          CONTENT_DIR=$(find . -type d -name "content" -not -path "*/dist/*" | head -n 1)
+          if [ -n "$CONTENT_DIR" ]; then
+            echo "📁 Found content/ in: $CONTENT_DIR"
+            cp -r $CONTENT_DIR dist/
+          fi
+
+          # Ensure generated config.js is in dist/
           cp config.js dist/
 
+      # 4. Deploy staged dist/ directory to GitHub Pages
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
